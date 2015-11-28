@@ -233,10 +233,10 @@ class DecisionTree(object):
             self.leaf_err_sum(cur_node, leaf_err_set)
             leaf_e_sum  = sum(leaf_err_set) + 0.5 * len(leaf_err_set)
             leaf_err_ratio =  leaf_e_sum / len(cur_node.dataset)
-            #std_dev = np.sqrt(leaf_err_ratio * (1 - leaf_err_ratio))
-            std_dev = np.sqrt(len(cur_node.dataset) * leaf_err_ratio * (1 - leaf_err_ratio))
+            std_dev = np.sqrt(leaf_err_ratio * (1 - leaf_err_ratio))
+            #std_dev = np.sqrt(len(cur_node.dataset) * leaf_err_ratio * (1 - leaf_err_ratio))
 
-            if leaf_e_sum - std_dev > cur_err_sum:
+            if leaf_e_sum + std_dev > cur_err_sum:
                 print leaf_e_sum + std_dev, cur_err_sum, "  prun!!!!"
                 cur_node.childNode = {}
                 cur_node.cls = get_cls_from_data(cur_node.dataset)
