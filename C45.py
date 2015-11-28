@@ -6,20 +6,22 @@ import numpy as np
 
 
 from utils import (
-    read_data, 
+    read_data,
     cal_set_info,
     get_disc_val,
     binary_sp,
     cal_gain_ratio,
     check_purity,
     check_accurcy,
+    get_err_sum,
     get_cls_from_data
 )
 
 class TreeNode(object):
-    def __init__(self):
+    def __init__(self,dataset):
         self.cls = 0.0                  # class of the leaf node
         self.childNode = {}             # type also TreeNode, 属性值: TreeNode
+        self.dataset = dataset
         self.attr_type = 0              # 1 for categorical, 0 for numerical
         self.attr_index = -1            # 分裂数据集所使用属性的序号
         self.demark = 0.0               # 如果是连续属性，分界点
@@ -28,13 +30,14 @@ class TreeNode(object):
 class DecisionTree(object):
     def __init__(self,dataset):
         self.dataset = dataset                      #包含第一行的属性类别指示
-        self.root = TreeNode()
-    
+        self.root = TreeNode(dataset[1:951])
 
-    def __construct_tree(self, cur_node, attr_list, data):
+
+    def __construct_tree(self, cur_node, attr_list):
         '''
         递归构建决策树
         '''
+        data = cur_node.dataset
         data_classified = {}
         max_gain_ratio, index = sys.float_info.min, -1
         num_border = 0.0
@@ -55,7 +58,7 @@ class DecisionTree(object):
 
         cur_node.attr_index = index
 
-        if index in DiscType: 
+        if index in DiscType:
             cur_node.attr_type = 1
 
             #对数据进行分类
@@ -63,11 +66,11 @@ class DecisionTree(object):
                 data_classified[val] = []
             for d in data:
                 data_classified[d[index]].append(d)
-            
+
         else:
             cur_node.attr_type = 0
             cur_node.demark = num_border
-            
+
             data_classified[0] = []
             data_classified[1] = []
             for d in data:
@@ -76,39 +79,35 @@ class DecisionTree(object):
                 else:
                     data_classified[1].append(d)
 
-        #print "子节点数据集"
-        #for k,v in data_classified.items():
-            #print ">>>>", k
-            #print v
-
         if len(attr_list) == 1:                 #下一次递归属性集为空
             for k, v in data_classified.items():
-                child_node = TreeNode()
+                child_node = TreeNode(v)
                 #属性值对应的数据集为空，则使用当前节点的数据集判断节点对应的分类
-                if len(v) == 0:                 
+                if len(v) == 0:
                     child_node.cls = get_cls_from_data(data)
                 else:
                     child_node.cls = get_cls_from_data(v)
                 cur_node.childNode[k] = child_node
         else:
-            attr_list.remove(index)
+            sub_attr = list(attr_list)
+            sub_attr.remove(index)
             for k, v in data_classified.items():
-                child_node = TreeNode()
+                child_node = TreeNode(v)
                 if len(v) == 0:
                     child_node.cls = get_cls_from_data(data)
                 elif check_purity(v) == 1:
                     child_node.cls = v[0][-1]           #随便取一个sample的标签
                 else:
-                    self.__construct_tree(child_node, attr_list, v)
+                    self.__construct_tree(child_node, sub_attr)
                 cur_node.childNode[k] = child_node
-                    
+
 
     def construct_tree(self):
         '''
         决策树递归构建entrance
         '''
-        init_attr_list = range(len(self.dataset[0])) 
-        self.__construct_tree(self.root, init_attr_list, self.dataset[1:176])
+        init_attr_list = range(len(self.dataset[0]))
+        self.__construct_tree(self.root, init_attr_list)
 
 
     def disc_gain_rt(self, index, data):
@@ -129,7 +128,7 @@ class DecisionTree(object):
                 statisc_dict[d[index]][d[-1]] += 1
             else:
                 statisc_dict[d[index]][d[-1]] = 1
-        
+
         '''
         statisc_dict结构:
         {
@@ -152,13 +151,13 @@ class DecisionTree(object):
         sorted_data = sorted(data, key=itemgetter(index))
         cls = sorted_data[0][-1]
 
-        #只选取便签改变时对应的属性值 
+        #只选取便签改变时对应的属性值
         for d in sorted_data:
             if d[-1] != cls:
                 cls = d[-1]
                 ctgs.add(d[index])
 
-        
+
         max_gain, border, gain_ratio = sys.float_info.min, 0.0, -1.0
         for ctg in ctgs:
             statisc_dict = {}
@@ -171,16 +170,16 @@ class DecisionTree(object):
             }
             '''
             statisc_dict['left'], statisc_dict['right'] = binary_sp(data, ctg, index)
-            
+
             info_gain, info_measure = cal_gain_ratio(statisc_dict, data)
 
             if info_measure == -1:
                 continue
             if info_gain > max_gain:
-                max_gain, border, gain_ratio = info_gain, ctg, info_gain / info_measure 
+                max_gain, border, gain_ratio = info_gain, ctg, info_gain / info_measure
 
         return  gain_ratio, border
-    
+
 
     def classify(self,dataset):
         predict_cls = []
@@ -204,16 +203,61 @@ class DecisionTree(object):
                     next_node = cur_node.childNode[1]
                 return self.__classify_data(data, next_node)
 
+    def leaf_err_sum(self, cur_node, err_set):         
+        '''
+        err_num: 当一个叶子节点数据集为空时，错误节点书就是父节点的错误节点数
+        '''
+        if len(cur_node.childNode) == 0:    #叶子节点
+            if len(cur_node.dataset) == 0:
+                err_set.append(0)
+            else:
+                err_sum = get_err_sum(cur_node.cls, cur_node.dataset)
+                err_set.append(err_sum)
+        else:                               # 内部节点
+            cur_node.cls = get_cls_from_data(cur_node.dataset)
+            cur_err_sum = get_err_sum(cur_node.cls, cur_node.dataset)
+            for _, c in cur_node.childNode.items():
+                if len(c.childNode) == 0 and len(c.dataset) == 0:
+                    self.leaf_err_sum(c, err_set)
+                else:
+                    self.leaf_err_sum(c, err_set)
+
+
+    def __prun_tree(self, cur_node):
+        if len(cur_node.childNode) == 0:
+            return 
+        else:
+            cur_node.cls = get_cls_from_data(cur_node.dataset)
+            cur_err_sum = get_err_sum(cur_node.cls, cur_node.dataset) + 0.5
+            leaf_err_set = []
+            self.leaf_err_sum(cur_node, leaf_err_set)
+            leaf_e_sum  = sum(leaf_err_set) + 0.5 * len(leaf_err_set)
+            leaf_err_ratio =  leaf_e_sum / len(cur_node.dataset)
+            #std_dev = np.sqrt(leaf_err_ratio * (1 - leaf_err_ratio))
+            std_dev = np.sqrt(len(cur_node.dataset) * leaf_err_ratio * (1 - leaf_err_ratio))
+
+            if leaf_e_sum - std_dev > cur_err_sum:
+                print leaf_e_sum + std_dev, cur_err_sum, "  prun!!!!"
+                cur_node.childNode = {}
+                cur_node.cls = get_cls_from_data(cur_node.dataset)
+            else:
+                for _, c in cur_node.childNode.items():
+                    self.__prun_tree(c)
+
+    def prun_tree(self):
+        self.__prun_tree(self.root)
+
 
 if __name__ == '__main__':
     #dataset =  read_data("test.txt")
-    dataset =  read_data("breast-cancer-assignment5.txt")
-    #dataset =  read_data("german-assignment5.txt")
+    #dataset =  read_data("breast-cancer-assignment5.txt")
+    dataset =  read_data("german-assignment5.txt")
     DiscType =  get_disc_val(dataset)
     decisin_tree = DecisionTree(dataset)
     decisin_tree.construct_tree()
-    #decisin_tree.iter_tree()
-    res_cls = decisin_tree.classify(dataset[176:278])
-    print res_cls
-    acc = check_accurcy(dataset[176:278], res_cls)
+    decisin_tree.prun_tree()
+    res_cls = decisin_tree.classify(dataset[951:])
+    #res_cls = decisin_tree.classify(dataset[1:])
+    #print res_cls
+    acc = check_accurcy(dataset[951:], res_cls)
     print acc

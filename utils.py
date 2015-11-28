@@ -116,8 +116,17 @@ def check_accurcy(datasets, predict_cls):
         cls.append(d[-1])
         if d[-1] != c:
             error_num += 1
-    print cls
+    #print cls
     return 1 - float(error_num)/len(predict_cls)
+
+
+def get_err_sum(cls, dataset):
+    err_sum = 0
+    for d in dataset:
+        if d[-1] != cls:
+            err_sum += 1
+    #print err_sum, len(dataset)
+    return err_sum
         
 
 if __name__ == '__main__':
