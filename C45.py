@@ -16,34 +16,25 @@ from utils import (
     get_cls_from_data
 )
 
-class AttrSet(object):
-    def __init__(self):
-        self.attr_type = 0              # 1 for categorical, 0 for numerical
-        self.attr_index = -1
-        self.ctgs = []
-        self.demark = 0.0
-
-
 class TreeNode(object):
-    def __init__(self, dataset):
+    def __init__(self):
         self.cls = 0.0                  # class of the leaf node
-        self.data = dataset
-        self.childNode = {}             # type also TreeNode
-        self.criteria = AttrSet()       # criteria to classify testing data
+        self.childNode = {}             # type also TreeNode, 属性值: TreeNode
+        self.attr_type = 0              # 1 for categorical, 0 for numerical
+        self.attr_index = -1            # 分裂数据集所使用属性的序号
+        self.demark = 0.0               # 如果是连续属性，分界点
 
 
 class DecisionTree(object):
     def __init__(self,dataset):
         self.dataset = dataset                      #包含第一行的属性类别指示
-        self.root = TreeNode(dataset[1:901])
+        self.root = TreeNode()
     
 
-    def __construct_tree(self, cur_node, attr_list):
+    def __construct_tree(self, cur_node, attr_list, data):
         '''
         递归构建决策树
         '''
-        data = cur_node.data
-        #print "当前节点数据集 ", data
         data_classified = {}
         max_gain_ratio, index = sys.float_info.min, -1
         num_border = 0.0
@@ -62,11 +53,10 @@ class DecisionTree(object):
             cur_node.cls = get_cls_from_data(data)
             return
 
-        cur_node.criteria.attr_index = index
+        cur_node.attr_index = index
 
         if index in DiscType: 
-            cur_node.criteria.attr_type = 1
-            cur_node.criteria.ctgs = DiscType[index]
+            cur_node.attr_type = 1
 
             #对数据进行分类
             for val in DiscType[index]:
@@ -75,8 +65,8 @@ class DecisionTree(object):
                 data_classified[d[index]].append(d)
             
         else:
-            cur_node.criteria.attr_type = 0
-            cur_node.criteria.demark = num_border
+            cur_node.attr_type = 0
+            cur_node.demark = num_border
             
             data_classified[0] = []
             data_classified[1] = []
@@ -93,25 +83,23 @@ class DecisionTree(object):
 
         if len(attr_list) == 1:                 #下一次递归属性集为空
             for k, v in data_classified.items():
-                child_node = TreeNode(v)
+                child_node = TreeNode()
                 #属性值对应的数据集为空，则使用当前节点的数据集判断节点对应的分类
                 if len(v) == 0:                 
                     child_node.cls = get_cls_from_data(data)
                 else:
                     child_node.cls = get_cls_from_data(v)
-                #cur_node.childNode.append(child_node)
                 cur_node.childNode[k] = child_node
         else:
             attr_list.remove(index)
             for k, v in data_classified.items():
-                child_node = TreeNode(v)
+                child_node = TreeNode()
                 if len(v) == 0:
                     child_node.cls = get_cls_from_data(data)
                 elif check_purity(v) == 1:
                     child_node.cls = v[0][-1]           #随便取一个sample的标签
                 else:
-                    self.__construct_tree(child_node, attr_list)
-                #cur_node.childNode.append(child_node)
+                    self.__construct_tree(child_node, attr_list, v)
                 cur_node.childNode[k] = child_node
                     
 
@@ -120,7 +108,7 @@ class DecisionTree(object):
         决策树递归构建entrance
         '''
         init_attr_list = range(len(self.dataset[0])) 
-        self.__construct_tree(self.root, init_attr_list)
+        self.__construct_tree(self.root, init_attr_list, self.dataset[1:176])
 
 
     def disc_gain_rt(self, index, data):
@@ -193,21 +181,6 @@ class DecisionTree(object):
 
         return  gain_ratio, border
     
-    def __iter_tree(self,cur_node):
-        if len(cur_node.childNode) == 0:                #叶子节点
-            print cur_node.cls
-            print cur_node.data
-            print '************************'
-        else:
-            print cur_node.criteria.attr_type, cur_node.criteria.attr_index,\
-                cur_node.criteria.ctgs, cur_node.criteria.demark
-            print cur_node.data
-            print '---------------------'
-            for _,c in cur_node.childNode.items():
-                self.__iter_tree(c)
-    
-    def iter_tree(self):
-        self.__iter_tree(self.root)
 
     def classify(self,dataset):
         predict_cls = []
@@ -215,16 +188,17 @@ class DecisionTree(object):
             predict_cls.append(self.__classify_data(d, self.root))
         return predict_cls
 
+
     def __classify_data(self, data, cur_node):
         if len(cur_node.childNode) == 0:
             return cur_node.cls
         else:
-            criteria_val = data[cur_node.criteria.attr_index]
-            if cur_node.criteria.attr_type == 1:            #离散属性
+            criteria_val = data[cur_node.attr_index]
+            if cur_node.attr_type == 1:            #离散属性
                 next_node = cur_node.childNode[criteria_val]
                 return self.__classify_data(data, next_node)
             else:
-                if criteria_val < cur_node.criteria.demark:
+                if criteria_val < cur_node.demark:
                     next_node = cur_node.childNode[0]
                 else:
                     next_node = cur_node.childNode[1]
@@ -233,13 +207,13 @@ class DecisionTree(object):
 
 if __name__ == '__main__':
     #dataset =  read_data("test.txt")
-    #dataset =  read_data("breast-cancer-assignment5.txt")
-    dataset =  read_data("german-assignment5.txt")
+    dataset =  read_data("breast-cancer-assignment5.txt")
+    #dataset =  read_data("german-assignment5.txt")
     DiscType =  get_disc_val(dataset)
     decisin_tree = DecisionTree(dataset)
     decisin_tree.construct_tree()
     #decisin_tree.iter_tree()
-    res_cls = decisin_tree.classify(dataset[901:1001])
+    res_cls = decisin_tree.classify(dataset[176:278])
     print res_cls
-    acc = check_accurcy(dataset[901:1001], res_cls)
+    acc = check_accurcy(dataset[176:278], res_cls)
     print acc
