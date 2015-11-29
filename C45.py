@@ -4,7 +4,6 @@ from collections import defaultdict
 from operator import itemgetter
 import numpy as np
 
-
 from utils import (
     read_data,
     cal_set_info,
@@ -28,9 +27,12 @@ class TreeNode(object):
 
 
 class DecisionTree(object):
-    def __init__(self,dataset):
+    def __init__(self, dataset, attrset, disc_type):
         self.dataset = dataset                      #包含第一行的属性类别指示
-        self.root = TreeNode(dataset[1:951])
+        self.attrset = attrset
+        self.disc_type = disc_type
+        self.root = TreeNode(dataset)
+        self.construct_tree()
 
 
     def __construct_tree(self, cur_node, attr_list):
@@ -43,7 +45,7 @@ class DecisionTree(object):
         num_border = 0.0
 
         for idx in attr_list:
-            if self.dataset[0][idx] == 1.0:            #离散属性
+            if idx in self.disc_type:                        #离散属性
                 gain_r = self.disc_gain_rt(idx, data)
             else:                                      #数值属性
                 gain_r, num_border = self.num_gain_rt(idx,data)
@@ -58,11 +60,11 @@ class DecisionTree(object):
 
         cur_node.attr_index = index
 
-        if index in DiscType:
+        if index in self.disc_type:
             cur_node.attr_type = 1
 
             #对数据进行分类
-            for val in DiscType[index]:
+            for val in self.disc_type[index]:
                 data_classified[val] = []
             for d in data:
                 data_classified[d[index]].append(d)
@@ -106,8 +108,8 @@ class DecisionTree(object):
         '''
         决策树递归构建entrance
         '''
-        init_attr_list = range(len(self.dataset[0]))
-        self.__construct_tree(self.root, init_attr_list)
+        #init_attr_list = range(len(self.dataset[0]))
+        self.__construct_tree(self.root, self.attrset)
 
 
     def disc_gain_rt(self, index, data):
@@ -115,9 +117,7 @@ class DecisionTree(object):
         计算一个属性的信息增益
         '''
         statisc_dict = {}
-        #info_gain, info_measure = 0.0, 0.0
-        index_val = DiscType[index]
-
+        index_val = self.disc_type[index]
         total_info = cal_set_info(data)
 
         for val in index_val:
@@ -214,8 +214,6 @@ class DecisionTree(object):
                 err_sum = get_err_sum(cur_node.cls, cur_node.dataset)
                 err_set.append(err_sum)
         else:                               # 内部节点
-            cur_node.cls = get_cls_from_data(cur_node.dataset)
-            cur_err_sum = get_err_sum(cur_node.cls, cur_node.dataset)
             for _, c in cur_node.childNode.items():
                 if len(c.childNode) == 0 and len(c.dataset) == 0:
                     self.leaf_err_sum(c, err_set)
@@ -234,7 +232,6 @@ class DecisionTree(object):
             leaf_e_sum  = sum(leaf_err_set) + 0.5 * len(leaf_err_set)
             leaf_err_ratio =  leaf_e_sum / len(cur_node.dataset)
             std_dev = np.sqrt(leaf_err_ratio * (1 - leaf_err_ratio))
-            #std_dev = np.sqrt(len(cur_node.dataset) * leaf_err_ratio * (1 - leaf_err_ratio))
 
             if leaf_e_sum + std_dev > cur_err_sum:
                 print leaf_e_sum + std_dev, cur_err_sum, "  prun!!!!"
@@ -250,14 +247,14 @@ class DecisionTree(object):
 
 if __name__ == '__main__':
     #dataset =  read_data("test.txt")
-    #dataset =  read_data("breast-cancer-assignment5.txt")
-    dataset =  read_data("german-assignment5.txt")
+    dataset =  read_data("breast-cancer-assignment5.txt")
+    #dataset =  read_data("german-assignment5.txt")
+    attr_set = range(len(dataset[0]))
     DiscType =  get_disc_val(dataset)
-    decisin_tree = DecisionTree(dataset)
-    decisin_tree.construct_tree()
-    decisin_tree.prun_tree()
-    res_cls = decisin_tree.classify(dataset[951:])
+    decisin_tree = DecisionTree(dataset[1:],attr_set, DiscType)
+    #decisin_tree.prun_tree()
+    res_cls = decisin_tree.classify(dataset[1:])
     #res_cls = decisin_tree.classify(dataset[1:])
     #print res_cls
-    acc = check_accurcy(dataset[951:], res_cls)
+    acc = check_accurcy(dataset[1:], res_cls)
     print acc

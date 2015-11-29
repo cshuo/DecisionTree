@@ -1,5 +1,7 @@
 # coding: utf-8
 import numpy as np
+import random
+import collections
 import sys
 
 def read_data(filename):
@@ -111,12 +113,9 @@ def check_purity(dataset):
 
 def check_accurcy(datasets, predict_cls):
     error_num = 0
-    cls = []
     for d, c in zip(datasets, predict_cls):
-        cls.append(d[-1])
         if d[-1] != c:
             error_num += 1
-    #print cls
     return 1 - float(error_num)/len(predict_cls)
 
 
@@ -127,7 +126,42 @@ def get_err_sum(cls, dataset):
             err_sum += 1
     #print err_sum, len(dataset)
     return err_sum
-        
+       
+
+def fcv(datasets, cls_func):
+    '''
+    10折交叉验证
+    '''
+    attr_type_list = datasets[0]
+    sub_data_sets = []
+    sun_set_len = int(len(datasets) / 10)
+    newsets = list(datasets[1:])
+
+    for k in xrange(10):
+        data_s = []
+        for i in xrange(sun_set_len):
+            if len(newsets) == 0:
+                break
+            data = random.choice(newsets)
+            data_s.append(data)
+            newsets.remove(data)
+        if k == 9:
+            data_s += newsets
+        sub_data_sets.append(data_s)
+
+    accurcy_list = []
+    for i in xrange(10):
+        test_data = sub_data_sets[i]
+        train_data = []
+        train_data.append(attr_type_list)
+        for j in xrange(10):
+            if j != i:
+                train_data += sub_data_sets[j]
+        acc = cls_func(train_data, test_data)
+        accurcy_list.append(acc)
+
+    print accurcy_list
+    return sum(accurcy_list) / len(accurcy_list)
 
 if __name__ == '__main__':
     dataset = read_data("breast-cancer-assignment5.txt");
