@@ -29,7 +29,7 @@ class TreeNode(object):
 
 class DecisionTree(object):
     def __init__(self, dataset, attrset, disc_type):
-        self.dataset = dataset                      
+        self.dataset = dataset
         self.attrset = attrset
         self.disc_type = disc_type
         self.root = TreeNode(dataset)
@@ -61,7 +61,7 @@ class DecisionTree(object):
 
         cur_node.attr_index = index
 
-        if index in self.disc_type:
+        if index in self.disc_type:                 #离散属性
             cur_node.attr_type = 1
 
             #对数据进行分类
@@ -70,7 +70,7 @@ class DecisionTree(object):
             for d in data:
                 data_classified[d[index]].append(d)
 
-        else:
+        else:                                       #连续属性
             cur_node.attr_type = 0
             cur_node.demark = num_border
 
@@ -101,7 +101,7 @@ class DecisionTree(object):
                 elif check_purity(v) == 1:
                     child_node.cls = v[0][-1]           #随便取一个sample的标签
                 else:
-                    self.__construct_tree(child_node, sub_attr)
+                    self.__construct_tree(child_node, sub_attr)     #对子节点进行递归
                 cur_node.childNode[k] = child_node
 
 
@@ -158,7 +158,6 @@ class DecisionTree(object):
                 cls = d[-1]
                 ctgs.add(d[index])
 
-
         max_gain, border, gain_ratio = sys.float_info.min, 0.0, -1.0
         for ctg in ctgs:
             statisc_dict = {}
@@ -183,22 +182,14 @@ class DecisionTree(object):
 
 
     def classify(self,dataset):
+        '''对给定的一个数据集中的数据进行分类'''
         predict_cls = []
         for d in dataset:
             predict_cls.append(self.__classify_data(d, self.root))
         return predict_cls
-        '''
-        for d in dataset:
-            cls = self.__classify_data(d, self.root)
-            if cls == d[-1]:
-                predict_cls.append(1)
-            else:
-                predict_cls.append(0)
-        return predict_cls
-        '''
-
 
     def __classify_data(self, data, cur_node):
+        '''递归分类过程'''
         if len(cur_node.childNode) == 0:
             return cur_node.cls
         else:
@@ -213,9 +204,10 @@ class DecisionTree(object):
                     next_node = cur_node.childNode[1]
                 return self.__classify_data(data, next_node)
 
-    def leaf_err_sum(self, cur_node, err_set):         
+    def leaf_err_sum(self, cur_node, err_set):
         '''
-        err_num: 当一个叶子节点数据集为空时，错误节点书就是父节点的错误节点数
+        悲观剪枝，用于计算一个当前节点子树的错误率
+        err_num: 当一个叶子节点数据集为空时，错误节点数目就是父节点的错误节点数
         '''
         if len(cur_node.childNode) == 0:    #叶子节点
             if len(cur_node.dataset) == 0:
@@ -232,8 +224,9 @@ class DecisionTree(object):
 
 
     def __prun_tree(self, cur_node):
-        if len(cur_node.childNode) == 0:
-            return 
+        '''剪枝'''
+        if len(cur_node.childNode) == 0:        #叶子节点直接跳过
+            return
         else:
             cur_node.cls = get_cls_from_data(cur_node.dataset)
             cur_err_sum = get_err_sum(cur_node.cls, cur_node.dataset) + 0.5
@@ -254,7 +247,7 @@ class DecisionTree(object):
     def prun_tree(self):
         self.__prun_tree(self.root)
 
-        
+
 if __name__ == '__main__':
     #dataset =  read_data("test.txt")
     #dataset =  read_data("breast-cancer-assignment5.txt")

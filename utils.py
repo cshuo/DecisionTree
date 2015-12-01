@@ -161,7 +161,7 @@ def fcv(datasets, cls_func):
         accurcy_list.append(acc)
 
     print accurcy_list
-    return sum(accurcy_list) / len(accurcy_list)
+    return np.array(accurcy_list).mean(), np.array(accurcy_list).std()
 
 if __name__ == '__main__':
     dataset = read_data("breast-cancer-assignment5.txt");

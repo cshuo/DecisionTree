@@ -12,10 +12,12 @@ from utils import (
 )
 
 def random_fr(dataset):
+    '''构建随机森林'''
+    iterate_num ,t= 20, 0
     attrset = range(len(dataset[0]))
     attr_select_num = int(np.sqrt(len(attrset)) / 2 + 1)        #每次选择的属性数目
     forests = []
-    
+
     while len(attrset) > 0:
         attr_s = []         #子树属性集
         data_s = []         #子树数据集
@@ -27,9 +29,27 @@ def random_fr(dataset):
             attr_s.append(attr)
         for i in xrange(len(dataset)-1):
             data_s.append(random.choice(dataset[1:]))
-        
+
         forests.append(DecisionTree(data_s, attr_s, DiscType))
 
+    '''
+    while t < iterate_num:
+        attr_s = []         #子树属性集
+        data_s = []         #子树数据集
+        print "itera: ", t
+
+        for i in xrange(attr_select_num):
+            attr = random.choice(attrset)
+            attr_s.append(attr)
+
+        for i in xrange(len(dataset)-1):
+            data_s.append(random.choice(dataset[1:]))
+
+        des_tree = DecisionTree(data_s, attr_s, DiscType)
+        des_tree.prun_tree()
+        forests.append(des_tree)
+        t += 1
+    '''
     return forests
 
 def rd_fr_classify(tran_data, test_data):
@@ -53,11 +73,10 @@ def rd_fr_classify(tran_data, test_data):
 
 
 if __name__ == '__main__':
-    dataset =  read_data("breast-cancer-assignment5.txt")
-    #dataset =  read_data("german-assignment5.txt")
+    #dataset =  read_data("breast-cancer-assignment5.txt")
+    dataset =  read_data("german-assignment5.txt")
     DiscType = get_disc_val(dataset)
     #forests = random_fr(dataset)
     #accurcy = rd_fr_classify(dataset, dataset[1:])
     #print accurcy
     print fcv(dataset, rd_fr_classify)
-    
