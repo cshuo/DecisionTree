@@ -13,7 +13,8 @@ from utils import (
     check_purity,
     check_accurcy,
     get_err_sum,
-    get_cls_from_data
+    get_cls_from_data,
+    fcv
 )
 
 class TreeNode(object):
@@ -28,7 +29,7 @@ class TreeNode(object):
 
 class DecisionTree(object):
     def __init__(self, dataset, attrset, disc_type):
-        self.dataset = dataset                      #包含第一行的属性类别指示
+        self.dataset = dataset                      
         self.attrset = attrset
         self.disc_type = disc_type
         self.root = TreeNode(dataset)
@@ -186,6 +187,15 @@ class DecisionTree(object):
         for d in dataset:
             predict_cls.append(self.__classify_data(d, self.root))
         return predict_cls
+        '''
+        for d in dataset:
+            cls = self.__classify_data(d, self.root)
+            if cls == d[-1]:
+                predict_cls.append(1)
+            else:
+                predict_cls.append(0)
+        return predict_cls
+        '''
 
 
     def __classify_data(self, data, cur_node):
@@ -244,11 +254,11 @@ class DecisionTree(object):
     def prun_tree(self):
         self.__prun_tree(self.root)
 
-
+        
 if __name__ == '__main__':
     #dataset =  read_data("test.txt")
-    dataset =  read_data("breast-cancer-assignment5.txt")
-    #dataset =  read_data("german-assignment5.txt")
+    #dataset =  read_data("breast-cancer-assignment5.txt")
+    dataset =  read_data("german-assignment5.txt")
     attr_set = range(len(dataset[0]))
     DiscType =  get_disc_val(dataset)
     decisin_tree = DecisionTree(dataset[1:],attr_set, DiscType)

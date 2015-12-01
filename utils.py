@@ -124,7 +124,6 @@ def get_err_sum(cls, dataset):
     for d in dataset:
         if d[-1] != cls:
             err_sum += 1
-    #print err_sum, len(dataset)
     return err_sum
        
 
@@ -158,6 +157,7 @@ def fcv(datasets, cls_func):
             if j != i:
                 train_data += sub_data_sets[j]
         acc = cls_func(train_data, test_data)
+        print "交叉: ", i , acc
         accurcy_list.append(acc)
 
     print accurcy_list

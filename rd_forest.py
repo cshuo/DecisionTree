@@ -53,8 +53,8 @@ def rd_fr_classify(tran_data, test_data):
 
 
 if __name__ == '__main__':
-    #dataset =  read_data("breast-cancer-assignment5.txt")
-    dataset =  read_data("german-assignment5.txt")
+    dataset =  read_data("breast-cancer-assignment5.txt")
+    #dataset =  read_data("german-assignment5.txt")
     DiscType = get_disc_val(dataset)
     #forests = random_fr(dataset)
     #accurcy = rd_fr_classify(dataset, dataset[1:])
