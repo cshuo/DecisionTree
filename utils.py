@@ -131,7 +131,6 @@ def fcv(datasets, cls_func):
     '''
     10折交叉验证
     '''
-    attr_type_list = datasets[0]
     sub_data_sets = []
     sun_set_len = int(len(datasets) / 10)
     newsets = list(datasets[1:])
@@ -152,11 +151,13 @@ def fcv(datasets, cls_func):
     for i in xrange(10):
         test_data = sub_data_sets[i]
         train_data = []
-        train_data.append(attr_type_list)
         for j in xrange(10):
             if j != i:
                 train_data += sub_data_sets[j]
         acc = cls_func(train_data, test_data)
+        #print "训练数据",len(train_data),train_data 
+        #print "测试数据",len(test_data),test_data
+
         print "交叉: ", i , acc
         accurcy_list.append(acc)
 

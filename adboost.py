@@ -1,5 +1,6 @@
 # coding: utf-8
 import numpy as np
+import sys
 
 from C45 import DecisionTree
 from utils import (
@@ -16,29 +17,36 @@ def adaboost(dataset, iterat_num):
     '''
     weighted_classifier = []
     data_weight = [float(1) / len(dataset)] * len(dataset)
+    #data_weight[len(dataset)-1] = 1 - sum(data_weight[:-1])
+    #print data_weight, sum(data_weight), len(dataset)
     err_rate, t = 1.0, 0
 
     while t < iterat_num:
-        print "迭代: ", t
+        #print "迭代: ", t
 
-        if t != 0:          #按照权重采样数据集
-            dataset_smp = sample_data(dataset, data_weight)
-        else:
-            dataset_smp = dataset
+        dataset_smp = sample_data(dataset, data_weight)
 
         #根据采集的数据样本生成决策树
         decisin_tree = DecisionTree(dataset_smp, AttrSet, DiscType)
         pred_res = get_pre_res(dataset, decisin_tree.classify(dataset))
-
         err_rate = wgh_err_rate(data_weight, pred_res)
+
+        if err_rate == 0:
+            print "错误率等于0!!!!!!!!!!!!"
+            tree_weight = sys.float_info.max
+            weighted_classifier.append([tree_weight, decisin_tree])
+            break
+        elif err_rate > 0.5:
+            print "错误率大于0.5!!!!!!!!!!"
+            data_weight = [float(1) / len(dataset)] * len(dataset)
+            continue
 
         tree_weight =  np.log(1 / err_rate - 1) / 2
         weighted_classifier.append([tree_weight, decisin_tree])
-
-        update_wgh(data_weight, pred_res, tree_weight)
-
+        update_wgh(data_weight, pred_res, tree_weight)              #更新权重
         t += 1
 
+    #print len(weighted_classifier)
     return weighted_classifier
 
 
@@ -49,7 +57,7 @@ def ada_classify(tran_data, test_data):
     '''
     res_cls = []
     sub_tree_wh = []
-    wh_classifier = adaboost(tran_data[1:],10)
+    wh_classifier = adaboost(tran_data,300)
     final_cls = []
 
     '''
@@ -63,6 +71,7 @@ def ada_classify(tran_data, test_data):
         res_cls.append(wh_tree[1].classify(test_data))
 
     clses_T = map(list, zip(*res_cls))
+    print "样本长度", len(clses_T), "分类器个数", len(res_cls)
 
     for c in clses_T:
         vote_res = {}
@@ -73,7 +82,7 @@ def ada_classify(tran_data, test_data):
                 vote_res[i] = wh
         final_cls.append(max(vote_res, key=vote_res.get))
 
-    print final_cls
+    print "分类结果:",  final_cls
     accurcy = check_accurcy(test_data, final_cls)
     return accurcy
 
@@ -99,7 +108,7 @@ def wgh_err_rate(data_wh, pred_res):
     for w, sign in zip(data_wh, pred_res):
         if sign == 0:
             err_rt += w
-    return err_rt
+    return err_rt / len(data_wh)
 
 
 def update_wgh(data_wh, pred_res, tree_wh):
@@ -115,7 +124,12 @@ def update_wgh(data_wh, pred_res, tree_wh):
     total_wh = sum(data_wh)
     for idx, _ in enumerate(data_wh):
         data_wh[idx] /= total_wh
-    data_wh[-1] += 1 - sum(data_wh)             #确保权重之和为1
+
+    '''
+    if 1.0 - sum(data_wh[:-1]) < 0:
+        print "less than 0-------------------------", 1-sum(data_wh[:-1])
+    data_wh[-1] = 1.0 - sum(data_wh[:-1])             #确保权重之和为1
+    '''
 
 
 def get_pre_res(dataset, res_cls):
@@ -131,9 +145,13 @@ def get_pre_res(dataset, res_cls):
     return pre_statis
 
 if __name__ == '__main__':
-    dataset =  read_data("german-assignment5.txt")
-    #dataset =  read_data("breast-cancer-assignment5.txt")
-    DiscType = get_disc_val(dataset)
-    AttrSet = range(len(dataset[0]))
+    #datasets =  read_data("german-assignment5.txt")
+    datasets =  read_data("breast-cancer-assignment5.txt")
+    #datasets =  read_data("test.txt")
+    DiscType = get_disc_val(datasets)
+    AttrSet = range(len(datasets[0]))
 
-    print fcv(dataset, ada_classify)
+    #print ada_classify(datasets[1:255], datasets[255:])
+    #print ada_classify(datasets[1:10], datasets[10:])
+
+    print fcv(datasets, ada_classify)

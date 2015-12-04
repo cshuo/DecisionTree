@@ -14,7 +14,6 @@ from utils import (
 def random_fr(dataset):
     '''构建随机森林'''
     iterate_num ,t= 20, 0
-    attrset = range(len(dataset[0]))
     attr_select_num = int(np.sqrt(len(attrset)) / 2 + 1)        #每次选择的属性数目
     forests = []
 
@@ -28,7 +27,7 @@ def random_fr(dataset):
             attrset.remove(attr)
             attr_s.append(attr)
         for i in xrange(len(dataset)-1):
-            data_s.append(random.choice(dataset[1:]))
+            data_s.append(random.choice(dataset))
 
         forests.append(DecisionTree(data_s, attr_s, DiscType))
 
@@ -76,6 +75,7 @@ if __name__ == '__main__':
     #dataset =  read_data("breast-cancer-assignment5.txt")
     dataset =  read_data("german-assignment5.txt")
     DiscType = get_disc_val(dataset)
+    attrset = range(len(dataset[0]))
     #forests = random_fr(dataset)
     #accurcy = rd_fr_classify(dataset, dataset[1:])
     #print accurcy
